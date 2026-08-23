@@ -146,6 +146,24 @@ func TestLoad_SyncFromEnv(t *testing.T) {
 	}
 }
 
+func TestLoad_SyncHTTPTimeoutFromEnv(t *testing.T) {
+	t.Setenv("CHRONCAL_SYNC_HTTP_TIMEOUT", "45s")
+
+	cfg := mustLoad(t)
+
+	if cfg.Sync.HTTPTimeout != "45s" {
+		t.Fatalf("Sync.HTTPTimeout = %q, want 45s", cfg.Sync.HTTPTimeout)
+	}
+}
+
+func TestLoad_SyncHTTPTimeoutUnsetByDefault(t *testing.T) {
+	cfg := mustLoad(t)
+
+	if cfg.Sync.HTTPTimeout != "" {
+		t.Fatalf("Sync.HTTPTimeout = %q, want empty (built-in default applies)", cfg.Sync.HTTPTimeout)
+	}
+}
+
 func TestLoad_SecurityFromEnv(t *testing.T) {
 	t.Setenv("CHRONCAL_SECURITY_ALLOW_UNSAFE_ALARM_AUDIO_ATTACH", "true")
 	t.Setenv("CHRONCAL_SECURITY_ALLOW_UNSAFE_ALARM_EMAIL_ATTENDEES", "true")

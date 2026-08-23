@@ -99,7 +99,11 @@ func journalFromVJournal(comp *ical.Component) (journal.Journal, []string, error
 	}
 	comments := parseCommentsFromProps(props)
 	contacts := parseContactsFromProps(props)
-	relations := parseRelationsFromProps(props)
+	relations, relationWarnings := parseRelationsFromProps(props)
+	for _, w := range relationWarnings {
+		// Name the owning record: the clamp leaves no other trace.
+		journalWarnings = append(journalWarnings, fmt.Sprintf("journal %q: %s", uid, w))
+	}
 
 	return journal.Journal{
 		UID:            uid,

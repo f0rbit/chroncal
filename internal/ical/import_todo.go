@@ -188,7 +188,11 @@ func todoFromVTodo(comp *ical.Component) (todo.Todo, []string, error) {
 	comments := parseCommentsFromProps(props)
 	contacts := parseContactsFromProps(props)
 	resources := parseResourcesFromProps(props)
-	relations := parseRelationsFromProps(props)
+	relations, relationWarnings := parseRelationsFromProps(props)
+	for _, w := range relationWarnings {
+		// Name the owning record: the clamp leaves no other trace.
+		todoWarnings = append(todoWarnings, fmt.Sprintf("todo %q: %s", uid, w))
+	}
 
 	return todo.Todo{
 		UID:             uid,

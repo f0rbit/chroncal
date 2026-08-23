@@ -99,6 +99,12 @@ UID is required for round-trip fidelity. `recurrence_id` marks an overridden ins
 
 All database times are RFC 3339 strings in UTC. Go code uses `time.Time` with `time.UTC`. An all-day event has the time component 00:00:00.
 
+### CalDAV Sync Against iCloud
+
+iCloud's sync-collection REPORT can list the calendar collection itself as a changed entry, with an href that is missing the trailing slash a collection href normally carries (for example `/17833618411/calendars/<uuid>` instead of `/17833618411/calendars/<uuid>/`). `caldav.Client.CanonicalObjectRef` rejects that href as a collection self-reference. Without the rejection, the stray href slips into a calendar-multiget REPORT body as a malformed resource reference. iCloud's server never answers that request, and the sync HTTP client stalls for the full `sync.http_timeout` (default 30s) on every pull. See `internal/caldav/client.go` (`CanonicalObjectRef`) and `internal/caldav/canonical_ref_test.go`.
+
+iCloud also sends RELATED-TO properties with extension RELTYPE tokens (for example `X-CALENDARSERVER-RECURRENCE-SET`) the `event_relations`/`todo_relations`/`journal_relations` tables' CHECK constraint does not accept (only `PARENT`/`CHILD`/`SIBLING` per the schema). `parseRelationsFromProps` (`internal/ical/import.go`) clamps an unrecognized RELTYPE to `PARENT` with an import warning instead of a hard failure.
+
 ### Logs
 
 Code that can run while the TUI owns the terminal must never write to stderr. Bubble Tea runs in the alternate screen. A write to stderr prints over the display. This includes `slog.Default()`.
