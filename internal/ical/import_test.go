@@ -1248,6 +1248,42 @@ END:VCALENDAR`
 	}
 }
 
+// TestImport_RelatedTo_UnsupportedRelType guards against a real iCloud
+// interop bug: some RELATED-TO properties carry a RELTYPE the events table's
+// CHECK constraint does not accept (only PARENT/CHILD/SIBLING). Before this
+// fix, that hard-failed the whole resource's import ("CHECK constraint
+// failed: rel_type") instead of a graceful clamp with a warning.
+func TestImport_RelatedTo_UnsupportedRelType(t *testing.T) {
+	t.Parallel()
+	ics := `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:rel-unsupported-test
+DTSTAMP:20260401T100000Z
+DTSTART:20260401T140000Z
+DTEND:20260401T150000Z
+SUMMARY:Event with an unsupported RELTYPE
+RELATED-TO;RELTYPE=X-CALENDARSERVER-RECURRENCE-SET:other-uid-789
+END:VEVENT
+END:VCALENDAR`
+	result, _ := ImportFile(strings.NewReader(ics))
+	if len(result.Events) != 1 {
+		t.Fatalf("events = %d", len(result.Events))
+	}
+	if len(result.Events[0].Relations) != 1 {
+		t.Fatalf("Relations = %d, want 1", len(result.Events[0].Relations))
+	}
+	if got := result.Events[0].Relations[0].RelType; got != "PARENT" {
+		t.Errorf("Rel[0].RelType = %q, want clamp to PARENT", got)
+	}
+	hasWarning := slices.ContainsFunc(result.Warnings, func(w string) bool {
+		return strings.Contains(w, "unsupported RELTYPE")
+	})
+	if !hasWarning {
+		t.Errorf("no unsupported-RELTYPE warning recorded; warnings = %v", result.Warnings)
+	}
+}
+
 func TestImport_VJournal(t *testing.T) {
 	t.Parallel()
 	ics := "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//test//test//EN\r\n" +

@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/douglasdemoura/chroncal/internal/app"
+	"github.com/douglasdemoura/chroncal/internal/caldav"
 	"github.com/douglasdemoura/chroncal/internal/config"
 	"github.com/douglasdemoura/chroncal/internal/event"
 	"github.com/douglasdemoura/chroncal/internal/ical"
@@ -211,6 +212,13 @@ Helpful conventions:
 		}
 		if cfg.ProductID != "" {
 			ical.ProductID = cfg.ProductID
+		}
+		if cfg.Sync.HTTPTimeout != "" {
+			d, err := time.ParseDuration(cfg.Sync.HTTPTimeout)
+			if err != nil {
+				return errInvalidInputf("config sync.http_timeout %q: invalid duration (e.g. 30s, 1m)", cfg.Sync.HTTPTimeout)
+			}
+			caldav.SetHTTPTimeout(d)
 		}
 		switch outputFmt {
 		case "text", "json":

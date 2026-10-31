@@ -34,6 +34,10 @@ type SMTPConfig struct {
 type SyncConfig struct {
 	Interval         string `mapstructure:"interval"`
 	ConflictStrategy string `mapstructure:"conflict_strategy"`
+	// HTTPTimeout is a Go duration string (for example "30s", "1m") bounding
+	// each CalDAV HTTP request the sync engine makes. Empty keeps the
+	// built-in default (caldav.DefaultHTTPTimeout).
+	HTTPTimeout string `mapstructure:"http_timeout"`
 }
 
 type SecurityConfig struct {
@@ -143,6 +147,7 @@ func newViper() *viper.Viper {
 	v.BindEnv("smtp.tls")
 	v.BindEnv("sync.interval")
 	v.BindEnv("sync.conflict_strategy")
+	v.BindEnv("sync.http_timeout")
 	v.BindEnv("security.allow_unsafe_alarm_audio_attach")
 	v.BindEnv("security.allow_unsafe_alarm_email_attendees")
 	v.BindEnv("security.allow_plaintext")

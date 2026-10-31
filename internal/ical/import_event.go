@@ -229,7 +229,11 @@ func eventFromVEvent(ve ical.Event, remote bool) (event.Event, []string, error) 
 	comments := parseCommentsFromProps(ve.Props)
 	contacts := parseContactsFromProps(ve.Props)
 	resources := parseResourcesFromProps(ve.Props)
-	relations := parseRelationsFromProps(ve.Props)
+	relations, relationWarnings := parseRelationsFromProps(ve.Props)
+	for _, w := range relationWarnings {
+		// Name the owning record: the clamp leaves no other trace.
+		childWarnings = append(childWarnings, fmt.Sprintf("event %q: %s", uid, w))
+	}
 
 	xprops := extractXPropertiesWithSet(ve.Props, handledEventProps)
 	if remote && badDTENDRaw != nil {

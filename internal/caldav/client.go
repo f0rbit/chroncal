@@ -52,6 +52,19 @@ var defaultHTTPClient = &http.Client{
 	Timeout:       defaultHTTPTimeout,
 	CheckRedirect: checkRedirect,
 }
+
+// SetHTTPTimeout overrides the per-request timeout on the shared CalDAV HTTP
+// client. NewBasicAuthClient, NewBearerAuthClient, and NewClientFromCredential
+// all build on defaultHTTPClient, so a call here before any client
+// construction rebounds every CalDAV request chroncal makes. d <= 0 is a
+// no-op: the built-in defaultHTTPTimeout (30s) stays in effect.
+func SetHTTPTimeout(d time.Duration) {
+	if d <= 0 {
+		return
+	}
+	defaultHTTPClient.Timeout = d
+}
+
 var errResponseTooLarge = errors.New("caldav response exceeds configured limits")
 
 func checkRedirect(req *http.Request, via []*http.Request) error {
@@ -499,7 +512,13 @@ func (c *Client) CanonicalObjectRef(calendarRef, objectRef string) (string, erro
 	}
 
 	objectPath := normalizePath(resolved.Path)
-	if objectPath == "" || strings.HasSuffix(objectPath, "/") {
+	// iCloud's sync-collection REPORT sometimes lists the calendar collection
+	// itself as a changed entry, with its href missing the trailing slash
+	// (issue: multiget stalls). That href would otherwise pass the
+	// trailing-slash check above and slip into a multiget REPORT as a
+	// malformed resource reference, which iCloud's server never answers.
+	// Reject it the same way as a slash-terminated collection href.
+	if objectPath == "" || strings.HasSuffix(objectPath, "/") || objectPath == strings.TrimSuffix(collectionPath, "/") {
 		return "", fmt.Errorf("calendar object href must point to a resource, not a collection")
 	}
 	return objectPath, nil

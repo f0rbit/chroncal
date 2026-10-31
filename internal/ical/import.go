@@ -629,21 +629,34 @@ func parseResourcesFromProps(props ical.Props) []string {
 	return out
 }
 
-func parseRelationsFromProps(props ical.Props) []model.Relation {
+// validRelTypes holds the RELTYPE values the schema's CHECK constraint
+// accepts. RFC 5545 §3.2.15 also permits an x-name or an iana-token, but the
+// database column only stores the three IANA-registered relationship kinds.
+var validRelTypes = map[string]bool{"PARENT": true, "CHILD": true, "SIBLING": true}
+
+// parseRelationsFromProps reads RELATED-TO properties. A RELTYPE outside
+// PARENT/CHILD/SIBLING (iCloud sends extension tokens on some events) clamps
+// to PARENT, the RFC 5545 default, with a warning instead of a hard failure.
+func parseRelationsFromProps(props ical.Props) ([]model.Relation, []string) {
 	var out []model.Relation
+	var warnings []string
 	for _, prop := range props.Values(ical.PropRelatedTo) {
-		relType := prop.Params.Get("RELTYPE")
+		relType := strings.ToUpper(prop.Params.Get("RELTYPE"))
 		if relType == "" {
 			relType = "PARENT" // default per RFC 5545
 		}
+		if !validRelTypes[relType] {
+			warnings = append(warnings, fmt.Sprintf("RELATED-TO %q: unsupported RELTYPE %q, treated as PARENT", prop.Value, relType))
+			relType = "PARENT"
+		}
 		if prop.Value != "" {
 			out = append(out, model.Relation{
-				RelType: strings.ToUpper(relType),
+				RelType: relType,
 				RelUID:  prop.Value,
 			})
 		}
 	}
-	return out
+	return out, warnings
 }
 
 // extractXPropertiesWithSet collects properties not in the handled set.
